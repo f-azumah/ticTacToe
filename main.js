@@ -20,7 +20,15 @@ function Gameboard(){
         return false;
     }
 
-    return {getBoard, placeMark};
+    const reset = () => {
+        for (let i = 0; i < rows; i++){
+            for (let j = 0; j < columns; j++){
+                board[i][j] = "";
+            }
+        }
+    }
+
+    return {getBoard, placeMark, reset};
 }
 
 function Player(name, mark, score){
@@ -30,6 +38,7 @@ function Player(name, mark, score){
 function gameController(){
     const player1 = Player("Player 1", "X", 0);
     const player2 = Player("Player 2", "O", 0);
+    let tieScore = 0;
     let currentPlayer = player1;
     const gameboard = Gameboard();
     let isGameOver = false;
@@ -68,12 +77,14 @@ function gameController(){
         if (!success) return;
 
         if (checkWinner()){
+            currentPlayer.score++;
             console.log(`${currentPlayer.name} wins!`);
             isGameOver = true;
-            return;
+            return true;
         }
 
         if (checkDraw()){
+            tieScore++;
             console.log("It's a draw!");
             isGameOver = true;
             return;
@@ -83,7 +94,79 @@ function gameController(){
         currentPlayer = currentPlayer === player1 ? player2 : player1;
     }
 
-    return {playRound, getBoard: gameboard.getBoard};
+    function resetGame(){
+        gameboard.reset();
+        isGameOver = false;
+    }
+
+    return {playRound,
+            resetGame,
+            getBoard: gameboard.getBoard,
+            getPlayers: () => [player1, player2],
+            getTieScore: () => tieScore}
 }
 
 const controller = gameController();
+
+function displayController(){
+    const [player1, player2] = controller.getPlayers();
+    const boardContainer = document.querySelector(".board");
+    const scoreBoard = document.querySelector(".container");
+    const resetBtn = document.querySelector(".reset");
+    resetBtn.classList.add("resetBtn");
+    const board = controller.getBoard();
+
+
+    (function renderBoard(){
+        boardContainer.textContent = "";
+
+        for (let i = 0; i < 3; i++){
+            for (let j = 0; j < 3; j++){
+                let cell = document.createElement('div');
+                cell.classList.add("cell");
+
+                cell.textContent = board[i][j];
+
+                cell.addEventListener("click", () => {
+                    controller.playRound(i,j);
+                    renderBoard();
+                    renderScores();
+                });
+
+                boardContainer.appendChild(cell);
+
+            }
+        }
+        resetBtn.addEventListener("click", () => {
+            controller.resetGame();
+            renderBoard();
+            renderScores();
+        });
+
+    })();
+
+    function renderScores(){
+        scoreBoard.textContent = "";
+
+        const player1Score = document.createElement('p');
+        player1Score.classList.add("score")
+        const player2Score = document.createElement('p');
+        player2Score.classList.add("score");
+        const tieScore = document.createElement('p');
+        tieScore.classList.add("score");
+
+
+        player1Score.textContent = `${player1.name}: ${player1.score}`;
+        player2Score.textContent = `${player2.name}: ${player2.score}`;
+        tieScore.textContent = `Draw: ${controller.getTieScore()}`
+
+
+        scoreBoard.appendChild(player1Score);
+        scoreBoard.appendChild(tieScore);
+        scoreBoard.appendChild(player2Score);
+    }
+    renderScores();
+
+}
+
+displayController();
